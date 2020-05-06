@@ -1,3 +1,28 @@
+#' @title GalgoR:  A bi-objective evolutionary meta-heuristic to identify robust transcriptomic classifiers associated with patient outcome across multiple cancer types.
+#'
+#' @description This package was devoloped to provide a simple to use set of functions to use the galgo algorithm. A multi-objective optimization algorithm for disease subtype discovery based on a non-dominated sorting genetic algorithm.
+#'
+#' Different statistical and machine learning approaches have long been used to identify gene expression/molecular signatures with prognostic potential in different cancer types. Nonetheless, the molecular classification of tumors is a difficult task and the results obtained via the current statistical methods are highly dependent on the features analyzed, the number of possible tumor subtypes under consideration, and the underlying assumptions made about the data. In addition, some cancer types are still lacking prognostic signatures and/or of subtype-specific predictors which are continually needed to further dissect tumor biology. In order to identify specific molecular phenotypes to develop precision medicine strategies we present Galgo: A multi-objective optimization process based on a non-dominated sorting genetic algorithm that combines the advantages of clustering methods for grouping heterogeneous omics data and the exploratory properties of genetic algorithms (GA) in order to find features that maximize the survival difference between subtypes while keeping high cluster consistency.
+#'
+#' \tabular{ll}{ Package: \tab galgoR\cr Type: \tab Package\cr
+#' Version: \tab 1.0.0\cr Date: \tab 2020-05-06 \cr License: \tab GPL-3\cr
+#' Copyright: \tab (c) 2020 Martin E. Guerrero-Gimenez.\cr URL: \tab
+#' \url{http://www.github.com/harpomaxx/galgoR}\cr LazyLoad: \tab yes\cr
+#' }
+#'
+#'
+#' @note Ideally, \pkg{galgoR} works faster using \pkg{gpuR} by C. Determan that provides wrappers functions for OpenCL
+#' programming.
+#' @author
+#' Martin E. Guerrero-Gimenez \email{mguerrero@@mendoza-conicet.gob.ar}
+#'
+#' Maintainer: Carlos A. Catania \email{harpomaxx@@gmail.com }
+#' @docType package
+#' @name galgoR-package
+#' @aliases galgoR-package galgoR
+NULL
+
+
 #' createFolds splits the data into k groups to perform cross-validation
 #'
 #' @param y a vector of outcomes
@@ -5,13 +30,14 @@
 #' @param list logical - should the results be in a list (TRUE) or in a vector
 #' @param returnTrain a logical. When true, the values returned are the sample positions correspondingto the data used during training. This argument only works in conjunction withlist = TRUE
 #'
-#' @return if list=TRUE, it returns a list with k elements were each element of the list has the position of the outcomes included in said fold, if list=FALSE the function returns a vector where each outcome is assigned to a given fold from 1 to k 
+#' @return if list=TRUE, it returns a list with k elements were each element of the list has the position of the outcomes included in said fold, if list=FALSE the function returns a vector where each outcome is assigned to a given fold from 1 to k
 #' @export
 #'
 #' @examples
 #' y= rnorm(100,5,2) # A vector of outcomes
 #' k= 5 #Number of folds
 #' createFolds(y,k=k,list=TRUE)
+#' @noRd
 
 createFolds <- function (y, k = 10, list = TRUE, returnTrain = FALSE)
 {
@@ -59,34 +85,35 @@ createFolds <- function (y, k = 10, list = TRUE, returnTrain = FALSE)
 
 
 #' Harmonic mean
-#' The harmonic mean can be expressed as the reciprocal of the arithmetic mean of the reciprocals of a given set of observations.  Since the harmonic mean of a list of numbers tends strongly toward the least elements of the list, it tends (compared to the arithmetic mean) to mitigate the impact of large outliers and aggravate the impact of small ones. 
-#' 
 #'
-#' @param a a vector of numbers
+#' The harmonic mean can be expressed as the reciprocal of the arithmetic mean of the reciprocals of a given set of observations.  Since the harmonic mean of a list of numbers tends strongly toward the least elements of the list, it tends (compared to the arithmetic mean) to mitigate the impact of large outliers and aggravate the impact of small ones.
 #'
-#' @return the harmonic mean of the values in a is computed, as a numeric vector of length one
+#' @param a a numeric vector of length > 1
+#'
+#' @return returns the harmonic mean of the values in \code{a}
 #' @export
-#'
+#' @noRd
 #' @examples
-#' x= rnorm(5,2,1) #five random numbers from the normal distribution
+#' x= rnorm(5,0,1) #five random numbers from the normal distribution
 #' x= c(x,20) #add outlier
-#' hmean(x)                    
-                   
+#' hmean(x)
+
 hmean <- function(a) {
   1 / mean(1 / a)
 }
 
-#' Restricted Mean Survival distance between groups
+#' Harmonic mean of the distance between consecutive groups
 #'
-#' @param x A numeric vector of length > 1 
+#'Implements the harmonic mean of the distance between consecutive groups multiplied by the number of comparisons: \eqn{cDist = [n/ (1/x1-x2 + 1/x2-x3 + 1/x3-x4 +...1/xn-1 - xn)] * n-1}
 #'
-#' @return A numeric vector of length 1. The function computes the Harmonic mean of the differences between consecutive groups multiplied by the number of comparisons                    
-#' This function is used inside 'fitness' function.
+#' @param x A numeric vector of length > 1
+#'
+#' @return The function computes the harmonic mean of the differences between consecutive groups multiplied by the number of comparisons and returns a positive number. This function is used inside \code{fitness} function.
 #' @export
-#'
+#' @noRd
 #' @examples
 #' V <- c(4.5,3,7,11)
-#' cDist(V)                   
+#' cDist(V)
 cDist <- function(x) {
   d <- x[order(x)]
   l <- length(d) - 1
@@ -98,25 +125,29 @@ cDist <- function(x) {
   return(hmean(dif) * l)
 }
 
-                    
-                    
-                    
+
+
+
 #' Survival fitness function using the Restricted Mean Survival Time (RMST) of each group
 #'
-#' @param OS a survival object with survival data of the patients evaluated
+#'Survival fitness function using the Restricted Mean Survival Time (RMST) of each group as proposed by \emph{Dehbi & Royston et al. (2017)}.
+#'
+#' @param OS a \code{survival} object with survival data of the patients evaluated
 #' @param clustclass a numeric vector with the group label for each patient
 #' @param period a number representing the period of time to evaluate in the RMST calculation
-#'                     
-#' @return The function computes the Harmonic mean of the differences between Restricted Mean Survival Time (RMST) of consecutive survival curves multiplied by the number of comparisons                    
-#' Restricted Mean Survival Time: https://www.bmj.com/content/357/bmj.j2250
+#'
+#' @return The function computes the Harmonic mean of the differences between Restricted Mean Survival Time (RMST) of consecutive survival curves multiplied by the number of comparisons.
+#'
+#' @references Dehbi Hakim-Moulay, Royston Patrick, Hackshaw Allan. Life expectancy difference and life expectancy ratio: two measures of treatment effects in randomised trials with non-proportional hazards BMJ 2017; 357 :j2250 \url{https://www.bmj.com/content/357/bmj.j2250}
+#' @author Martin E Guerrero-Gimenez, \email{mguerrero@mendoza-conicet.gob.ar}
 #' @export
 #'
 #' @examples
 #' rna_luad<-use_rna_luad()
-#' clinical <- rna_luad$clinical
+#' library(Biobase)
+#' clinical <- pData(rna_luad$TCGA)
 #' OS <- survival::Surv(time=clinical$time,event=clinical$status)
-#' fitness(OS,clustclass= clinical$Wilk.Subtype, 1825)                    
-                    
+#' fitness(OS,clustclass= clinical$Wilk.Subtype, 1825)
 fitness <- function(OS, clustclass,period) {
   score <- tryCatch(
     {
@@ -141,6 +172,7 @@ fitness <- function(OS, clustclass,period) {
 #' @export
 #'
 #' @examples
+#' @noRd
 ArrayTrain <- function(flds, Data) {
   trainData <- Data[, -flds]
 }
@@ -154,6 +186,7 @@ ArrayTrain <- function(flds, Data) {
 #' @export
 #'
 #' @examples
+#' @noRd
 ArrayTest <- function(flds, Data) {
   testData <- Data[, flds]
 }
@@ -168,6 +201,7 @@ ArrayTest <- function(flds, Data) {
 #' @export
 #'
 #' @examples
+#' @noRd
 subDist <- function(flds, D) {
     sub <- subset(D, -flds)
 }
@@ -180,6 +214,7 @@ subDist <- function(flds, D) {
 #' @export
 #'
 #' @examples
+#' @noRd
 alloc2 <- function(C) {
   Ct <- t(C)
   ord <- matchingR::galeShapley.marriageMarket(C, Ct)
@@ -196,11 +231,12 @@ alloc2 <- function(C) {
 #' @export
 #'
 #' @examples
+#' @noRd
 reord <- function(C, ord) {
   C <- C[, ord]
 }
 
-#' Title
+#' Survival crossvalidation
 #'
 #'crossvalidation function based on: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3105299/
 #' Data is the expression matrix
@@ -221,6 +257,7 @@ reord <- function(C, ord) {
 #' @export
 #'
 #' @examples
+#' @noRd
 crossvalidation <- function(Data, flds, indv, k, OS, distance,nCV,period) {
   Data <- Data[indv, ]
   D <- distance(Data)
@@ -253,6 +290,7 @@ crossvalidation <- function(Data, flds, indv, k, OS, distance,nCV,period) {
 #' @export
 #'
 #' @examples
+#' @noRd
 minGenes <- function(x,chrom_length) {
   sum(x) >= 10 & sum(x) < chrom_length
 }
@@ -272,6 +310,7 @@ minGenes <- function(x,chrom_length) {
 #' @export
 #'
 #' @examples
+#' @noRd
 kcrossover <- function(a, b, n) {
   if (length(a) != length(b)) {
     stop("vectors of unequal length")
@@ -311,6 +350,7 @@ kcrossover <- function(a, b, n) {
 #' @export
 #'
 #' @examples
+#' @noRd
 ucrossover <- function(a, b) {
   if (length(a) != length(b)) {
     stop("vectors of unequal length")
@@ -336,6 +376,7 @@ ucrossover <- function(a, b) {
 #' @export
 #'
 #' @examples
+#' @noRd
 asMut <- function(x) {
   chrom_length <- length(x)
   res <- x
@@ -365,6 +406,7 @@ asMut <- function(x) {
 #' @export
 #'
 #' @examples
+#' @noRd
 offspring <- function(X1, chrom_length, population, TournamentSize) {
   New <- matrix(NA, ncol = chrom_length, nrow = population) # Create empty matrix to add new individuals
   NewK <- matrix(NA, nrow = 1, ncol = population) # same for cluster chromosome
@@ -433,35 +475,313 @@ offspring <- function(X1, chrom_length, population, TournamentSize) {
 #' @export
 #'
 #' @examples
+#' @noRd
 pen <- function(x) {
   1 / (1 + (x / 500)^2)
 }
 
+
 #' Title
+#' Base callback function
+#' Save  population
 #'
-#' @param population
-#' @param generations
-#' @param nCV
-#' @param usegpu
-#' @param distancetype
-#' @param TournamentSize
-#' @param period
-#' @param OS
-#' @param chrom_length
+#' @param directory
+#' @param prefix
+#' @param generation
+#' @param pop_pool
+#' @param pareto
 #' @param prob_matrix
-#' @param res_dir
-#' @param save_pop_partial_callback
-#' @param save_pop_final_callback
-#' @param report_callback
-#' @param start_gen_callback
-#' @param end_gen_callback
-#' @param verbose
+#' @param current_time
+#'
+#' @return an objet of class galgo
+#' @export
+#'
+#' @examples
+#' @noRd
+base_save_pop_callback <- function(directory="results/",prefix,generation,pop_pool,pareto,prob_matrix,current_time){
+  if (!dir.exists(directory))
+    dir.create(directory)
+  colnames(pop_pool)[1:(ncol(pop_pool) - 5)] <- rownames(prob_matrix)
+  output <- list(Solutions = pop_pool, ParetoFront = pareto)
+  filename <- paste0(directory,prefix, ".rda")
+  save(file = filename, output)
+  class(output)<- "galgo.Obj"
+  return(output)
+}
+
+#' Title
+#' Save partial population (every 2 generations)
+#'
+#' @param directory
+#' @param generation
+#' @param pop_pool
+#' @param pareto
+#' @param prob_matrix
+#' @param current_time
 #'
 #' @return
 #' @export
 #'
 #' @examples
-search_ges <- function(population = 30, # Number of individuals to evaluate
+#' @noRd
+base_save_pop_partial_callback <- function(directory="results/",generation,pop_pool,pareto,prob_matrix,current_time){
+  if (!dir.exists(directory))
+      dir.create(directory)
+  if (generation %% 2 == 0){
+    base_save_pop_callback(directory,prefix=generation,generation,pop_pool,pareto,prob_matrix,current_time)
+  }
+
+}
+
+#' Title
+#'
+#' @param directory
+#' @param generation
+#' @param pop_pool
+#' @param pareto
+#' @param prob_matrix
+#' @param current_time
+#'
+#' @return
+#' @export
+#'
+#' @examples
+#' @noRd
+base_save_pop_final_callback <- function(directory="results/",generation,pop_pool,pareto,prob_matrix,current_time){
+  if (!dir.exists(directory))
+    dir.create(directory)
+  #environment(base_save_pop_callback)<-environment()
+  output<- base_save_pop_callback(directory,prefix="final",generation,pop_pool,pareto,prob_matrix,current_time)
+  print(paste0("final population saved in final.rda"))
+  class(output)<- "galgo.Obj"
+  return(output)
+}
+
+#' Title
+#' Print basic info per generation
+#'
+#' @param generation
+#' @param pop_pool
+#' @param pareto
+#' @param prob_matrix
+#' @param current_time
+#'
+#' @return
+#' @export
+#'
+#' @examples
+#' @noRd
+base_report_callback <- function(generation,pop_pool,pareto,prob_matrix,current_time){
+  chrom_length <- nrow(prob_matrix)
+  print(paste0("Generation ", generation, " Non-dominated solutions:"))
+  print(pop_pool[pop_pool[, "rnkIndex"] == 1, (chrom_length + 1):(chrom_length + 5)])
+  #print(Sys.time()- start_time)
+}
+
+#' Title
+#'
+#' @param generation
+#' @param pop_pool
+#' @param pareto
+#' @param prob_matrix
+#' @param current_time
+#'
+#' @return
+#' @export
+#'
+#' @examples
+#' @noRd
+no_report_callback <- function(generation,pop_pool,pareto,prob_matrix,current_time){
+  if(generation%%5==0)
+    cat("*")
+  else
+    cat(".")
+}
+
+#' Title
+#'
+#' @param generation
+#' @param pop_pool
+#' @param pareto
+#' @param prob_matrix
+#' @param current_time
+#'
+#' @return
+#' @export
+#'
+#' @examples
+#' @noRd
+base_start_gen_callback <- function(generation,pop_pool,pareto,prob_matrix,current_time){
+  #start_time <- Sys.time()
+}
+
+#' Title
+#'
+#' @param generation
+#' @param pop_pool
+#' @param pareto
+#' @param prob_matrix
+#' @param current_time
+#'
+#' @return
+#' @export
+#'
+#' @examples
+#' @noRd
+base_end_gen_callback <- function(generation,pop_pool,pareto,prob_matrix,current_time){
+  #print(Sys.time()- start_time)
+}
+
+#' Title
+#'
+#' @param generation
+#' @param pop_pool
+#' @param pareto
+#' @param prob_matrix
+#' @param current_time
+#'
+#' @return
+#' @export
+#'
+#' @examples
+#' @noRd
+default_callback <- function(generation,pop_pool,pareto,prob_matrix,current_time){
+
+}
+
+#' Convert galgo.Obj to list
+#'
+#' The current function transforms a \code{galgo.Obj} to a \code{list}
+#'
+#' @param output An object of class \code{galgo.Obj}
+#'
+#' @return The current function restructurates a \code{galgo.Obj} to a more easy to understand an use \code{list}. This output is particularly useful if one wants to select a given solution and use its outputs in a new classifier. The output of type \code{list} has a length equals to the number of solutions obtained by the \code{\link[galgoR:galgo]{galgo}} algorithm.
+#'
+#'Basically this output is a list of lists, where each element of the output is named after the solution's name (\code{solution.n}, where \code{n} is the number assigned to that solution), and inside of it, it has all the constituents for that given solution with the following structure:
+#'\enumerate{
+#'\item \strong{output$solution.n$Genes}: A vector of the features included in the solution
+#'\item \strong{output$solution.n$k}: The number of partitions found in that solution
+#'\item \strong{output$solution.n$SC.Fit}: The average silhouette coefficient of the partitions found
+#'\item \strong{output$solution.n$Surv.Fit}: The survival fitnes value
+#'\item \strong{output$solution.n$Rank}: The solution rank
+#'\item \strong{CrowD}: The solution crowding distance related to the rest of the solutions
+#'}
+#' @export
+#' @author Martin E Guerrero-Gimenez, \email{mguerrero@mendoza-conicet.gob.ar}
+#'
+#' @examples
+#'rna_luad<-use_rna_luad()
+#'library(Biobase)
+#'prm <- exprs(rna_luad$TCGA)
+#'clinical <- pData(rna_luad$TCGA)
+#'OS <- survival::Surv(time=clinical$time,event=clinical$status)
+#'output <- galgo(generations = 10, population = 30,prob_matrix = prm, OS=OS)
+#'outputList <- toList(output)
+
+toList <- function(output) {
+  if (!methods::is(output, "galgo.Obj")) {
+    stop("object must be of class 'galgo.Obj'")
+  }
+  OUTPUT <- list()
+  Genes <- colnames(output$Solutions)[1:(ncol(output$Solutions) - 5)]
+  for (i in 1:nrow(output$Solutions)) {
+    Sol <- paste("Solution", i, sep = ".")
+    OUTPUT[[Sol]] <- list()
+    OUTPUT[[Sol]][["Genes"]] <- Genes[as.logical(output$Solutions[i, 1:length(Genes)])]
+    OUTPUT[[Sol]]["k"] <- output$Solutions[i, "k"]
+    OUTPUT[[Sol]]["SC.Fit"] <- output$Solutions[i, length(Genes) + 2]
+    OUTPUT[[Sol]]["Surv.Fit"] <- output$Solutions[i, length(Genes) + 3]
+    OUTPUT[[Sol]]["rank"] <- output$Solutions[i, "rnkIndex"]
+    OUTPUT[[Sol]]["CrowD"] <- output$Solutions[i, "CrowD"]
+  }
+  return(OUTPUT)
+}
+
+#' Convert galgo.Obj to data.frame
+#'
+#' The current function transforms a \code{galgo.Obj} to a \code{data.frame}
+#'
+#' @param output An object of class \code{galgo.Obj}
+#'
+#' @return The current function reestructurates a \code{galgo.Obj} to a more easy to understand an use \code{data.frame}. The output \code{data.frame} has \eqn{ m x n} dimensions, were the rownames (\eqn{m}) are the solutions obtained by the \code{\link[galgoR:galgo]{galgo}} algorithm. The columns has the following structure:
+#'\enumerate{
+#'  \item \strong{Genes}: The features included in each solution in form of a \code{list}
+#'  \item \strong{k}: The number of partitions found in that solution
+#'  \item \strong{SC.Fit}: The average silhouette coefficient of the partitions found
+#'  \item \strong{Surv.Fit}: The survival fitnes value
+#'  \item \strong{Rank}: The solution rank
+#'  \item \strong{CrowD}: The solution crowding distance related to the rest of the solutions
+#'}
+#' @export
+#'
+#' @author Martin E Guerrero-Gimenez, \email{mguerrero@mendoza-conicet.gob.ar}
+#'
+#' @examples
+#' rna_luad<-use_rna_luad()
+#'library(Biobase)
+#'prm <- exprs(rna_luad$TCGA)
+#'clinical <- pData(rna_luad$TCGA)
+#'OS <- survival::Surv(time=clinical$time,event=clinical$status)
+#'output <- galgo(generations = 10, population = 30,prob_matrix = prm, OS=OS)
+#'outputDF <- toDataFrame(output)
+toDataFrame <- function(output) {
+    if (!methods::is(output, "galgo.Obj")) {
+        stop("object must be of class 'galgo.Obj'")
+    }
+    Genes <- colnames(output$Solutions)[1:(ncol(output$Solutions) - 5)]
+    ListGenes <- list()
+    for (i in 1:nrow(output$Solutions)) {
+        ListGenes[[i]] <- list()
+        ListGenes[[i]] <- Genes[as.logical(output$Solutions[i, 1:length(Genes)])]
+    }
+
+    OUTPUT <- data.frame(Genes = I(ListGenes), k = output$Solutions[, "k"], SC.Fit = output$Solutions[, ncol(output$Solutions) - 3], Surv.Fit = output$Solutions[, ncol(output$Solutions) - 2], Rank = output$Solutions[, "rnkIndex"], CrowD = output$Solutions[, "CrowD"])
+  rownames(OUTPUT) <- paste("Solutions", 1:nrow(output$Solutions) ,sep=".")
+  return(OUTPUT)
+}
+
+#' GalgoR main function
+#'
+#' \code{\link[galgoR:galgo]{galgo}} accepts an expression matrix and a survival object to find robust gene expression signatures related to a given outcome
+#'
+#' @param population  a number indicating the number of solutions in the population of solutions that will be evolved
+#' @param generations a number indicating the number of iterations of the galgo algorithm
+#' @param nCV number of cross-validation sets
+#' @param usegpu \code{logical} default to \code{FALSE}, set to \code{TRUE} if you wish to use gpu computing (\code{\link[gpuR]{gpuR}} package must be properly installed and loaded)
+#' @param distancetype character, it can be \code{'pearson'} (centered pearson), \code{'uncentered'} (uncentered pearson), \code{'spearman'} or \code{'euclidean'}
+#' @param TournamentSize a number indicating the size of the tournaments for the selection procedure
+#' @param period a number indicating the outcome period to evaluate the RMST
+#' @param OS a \code{survival} object (see \code{\link[surival:Surv]{Surv} function from the \code{\link[survival]{survival}} package)
+#' @param prob_matrix a \code{matrix} or \code{data.frame}. Must be an expression matrix with features in rows and samples in columns
+#' @param res_dir a \code{character} string indicating where to save the intermediate and final output of the algorithm
+#' @param save_pop_partial_callback optional callback function between iterations
+#' @param save_pop_final_callback optional callback function for the last iteration
+#' @param report_callback optional callback function
+#' @param start_gen_callback optional callback function for the beginning of the run
+#' @param end_gen_callback optional callback function for the end of the run
+#' @param verbose
+#'
+#' @return an object of type \code{'galgo.Obj'} that corresponds to a list with the elements \code{$Solutions} and \code{$ParetoFront}. \code{$Solutions} is a \eqn{l x (n + 5)} matrix where \eqn{n} is the number of features evaluated and \eqn{l} is the number of solutions obtained.
+#' The submatrix \eqn{l x n} is a binary matrix where each row represents the chromosome of an evolved solution from the solution population, where each feature can be present (1) or absent (0) in the solution. Column \eqn{n +1} represent the  \eqn{k} number of clusters for each solutions. Column \eqn{n+2} to \eqn{n+5} shows the SC Fitness and Survival Fitness values, the solution rank, and the crowding distance of the solution in the final pareto front respectevely.
+#' For easier interpretation of the \code{'galgo.Obj'}, the output can be reshaped using the \code{\link[galgoR:toList]{toList}} and \code{\link[galgoR:toDataFrame]{toDataFrame}} functions
+#'
+#' @export
+#'
+#' @author Martin E Guerrero-Gimenez, \email{mguerrero@mendoza-conicet.gob.ar}
+#'
+#' @examples
+#' rna_luad<-use_rna_luad()
+#' library(Biobase)
+#' prm <- exprs(rna_luad$TCGA)
+#' clinical <- pData(rna_luad$TCGA)
+#' OS <- survival::Surv(time=clinical$time,event=clinical$status)
+#' output <- galgo(generations = 10, population = 30,prob_matrix = prm, OS=OS)
+#' outputDF <- toDataFrame(output)
+#' outputList <- toList(output)
+
+
+
+galgo <- function(population = 30, # Number of individuals to evaluate
                        generations = 2, # Number of generations
                        nCV = 5, # Number of crossvalidations for function "crossvalidation"
                        usegpu = FALSE, # to use gpuR
@@ -477,7 +797,7 @@ search_ges <- function(population = 30, # Number of individuals to evaluate
                        start_gen_callback=base_start_gen_callback,
                        end_gen_callback=base_end_gen_callback,
                        verbose=2
-                       ) {
+) {
 
   if (verbose == 0){
     report_callback = default_callback
@@ -499,7 +819,7 @@ search_ges <- function(population = 30, # Number of individuals to evaluate
   calculate_distance <- select_distance(distancetype, usegpu)
   # Empty list to save the solutions.
   PARETO <- list()
-  chrom_length <- nrow(prob_matrix) 
+  chrom_length <- nrow(prob_matrix)
   # 1. Create random population of solutions.
 
   # Creating random clusters from 2-10.
@@ -515,6 +835,7 @@ search_ges <- function(population = 30, # Number of individuals to evaluate
   ##### Main loop.
   for (g in 1:generations) {
     # Output for the generation callback
+    callback_data <- list()
     environment(start_gen_callback)<-environment()
     start_gen_callback()
 
@@ -569,8 +890,8 @@ search_ges <- function(population = 30, # Number of individuals to evaluate
       X1 <- cbind(X1, CrowD) # data.frame with solution vector, number of clusters, ranking and crowding distance.
 
       # Output for the generation callback
-      environment(report_callback)<-environment()
-      report_callback()
+      #environment(report_callback)<-environment()
+      report_callback(generation=g,pop_pool=X1,pareto=PARETO,prob_matrix=prob_matrix,current_time=start_time)
 
 
       # Save parent generation.
@@ -608,8 +929,8 @@ search_ges <- function(population = 30, # Number of individuals to evaluate
       PARETO[[g]] <- X1[, (chrom_length + 2):(chrom_length + 3)] # Saves the fitnes of the solutions of the current generation
 
       # Output for the generation callback
-      environment(report_callback)<-environment()
-      report_callback()
+      #environment(report_callback)<-environment()
+      report_callback(generation=g,pop_pool=X1,pareto=PARETO,prob_matrix=prob_matrix,current_time=start_time)
 
       #print(paste0("Generation ", g, " Non-dominated solutions:"))
       #print(X1[X1[, "rnkIndex"] == 1, (chrom_length + 1):(chrom_length + 5)])
@@ -625,185 +946,17 @@ search_ges <- function(population = 30, # Number of individuals to evaluate
     # 5.Go to step 2
 
     gc()
-    environment(base_save_pop_callback)<-environment()
-    environment(save_pop_partial_callback)<-environment()
-    save_pop_partial_callback(res_dir)
+    #environment(base_save_pop_callback)<-environment()
+    #environment(save_pop_partial_callback)<-environment()
+    save_pop_partial_callback(res_dir,generation=g,pop_pool=X1,pareto=PARETO,prob_matrix=prob_matrix,current_time=start_time)
 
-    environment(end_gen_callback)<-environment()
-    end_gen_callback()
+    #environment(end_gen_callback)<-environment()
+    end_gen_callback(generation=g,pop_pool=X1,pareto=PARETO,prob_matrix=prob_matrix,current_time=start_time)
   }
 
   parallel::stopCluster(cluster)
-  environment(base_save_pop_callback)<-environment()
-  environment(save_pop_final_callback)<-environment()
-  save_pop_final_callback(res_dir)
-}
-
-#' Title
-#' Base callback functions
-#' Save  population
-#'
-#' @param directory
-#' @param prefix
-#'
-#' @return
-#' @export
-#'
-#' @examples
-base_save_pop_callback <- function(directory="results/",prefix){
   #environment(base_save_pop_callback)<-environment()
-  if (!dir.exists(directory))
-    dir.create(directory)
-  colnames(X1)[1:(ncol(X1) - 5)] <- rownames(prob_matrix)
-  output <- list(Solutions = X1, ParetoFront = PARETO)
-  filename <- paste0(directory,prefix, ".rda")
-  save(file = filename, output)
-  class(output)<- "galgo.Obj"
-  return(output)
+  #environment(save_pop_final_callback)<-environment()
+  save_pop_final_callback(res_dir,generation=g,pop_pool=X1,pareto=PARETO,prob_matrix=prob_matrix,current_time=start_time)
 }
-
-#' Title
-#' Save partial population (every 2 generations)
-#' @param directory
-#'
-#' @return
-#' @export
-#'
-#' @examples
-base_save_pop_partial_callback <- function(directory="results/"){
-  if (!dir.exists(directory))
-      dir.create(directory)
-  if (g %% 2 == 0){
-    environment(base_save_pop_callback)<-environment()
-    base_save_pop_callback(directory,prefix=g)
-  }
-
-}
-
-#' Title
-#'
-#' @param directory
-#'
-#' @return
-#' @export
-#'
-#' @examples
-base_save_pop_final_callback <- function(directory="results/"){
-  if (!dir.exists(directory))
-    dir.create(directory)
-  environment(base_save_pop_callback)<-environment()
-  output<- base_save_pop_callback(directory,prefix="final")
-  print(paste0("final population saved in final.rda"))
-  class(output)<- "galgo.Obj"
-  return(output)
-}
-
-#' Title
-#' Print basic info per generation
-#'
-#' @return
-#' @export
-#'
-#' @examples
-base_report_callback <- function(){
-  print(paste0("Generation ", g, " Non-dominated solutions:"))
-  print(X1[X1[, "rnkIndex"] == 1, (chrom_length + 1):(chrom_length + 5)])
-  #print(Sys.time()- start_time)
-}
-
-#' Title
-#'
-#' @return
-#' @export
-#'
-#' @examples
-no_report_callback <- function(){
-  if(g%%5==0)
-    cat("*")
-  else
-    cat(".")
-}
-
-#' Title
-#'
-#' @return
-#' @export
-#'
-#' @examples
-base_start_gen_callback <- function(){
-  start_time <- Sys.time()
-}
-
-#' Title
-#'
-#' @return
-#' @export
-#'
-#' @examples
-base_end_gen_callback <- function(){
-  print(Sys.time()- start_time)
-}
-
-#' Title
-#'
-#' @return
-#' @export
-#'
-#' @examples
-default_callback <- function(){
-
-}
-
-#' Title
-#' CONVERT OUTPUT TO LIST
-#'
-#' @param output
-#'
-#' @return
-#' @export
-#'
-#' @examples
-
-toList <- function(output) {
-  if (!is(output, "galgo.Obj")) {
-    stop("object must be of class 'galgo.Obj'")
-  }
-  OUTPUT <- list()
-  Genes <- colnames(output$Solutions)[1:(ncol(output$Solutions) - 5)]
-  for (i in 1:nrow(output$Solutions)) {
-    Sol <- paste("Solution", i, sep = ".")
-    OUTPUT[[Sol]] <- list()
-    OUTPUT[[Sol]][["Genes"]] <- Genes[as.logical(output$Solutions[i, 1:length(Genes)])]
-    OUTPUT[[Sol]]["k"] <- output$Solutions[i, "k"]
-    OUTPUT[[Sol]]["SC.Fit"] <- output$Solutions[i, length(Genes) + 2]
-    OUTPUT[[Sol]]["Surv.Fit"] <- output$Solutions[i, length(Genes) + 3]
-    OUTPUT[[Sol]]["rank"] <- output$Solutions[i, "rnkIndex"]
-    OUTPUT[[Sol]]["CrowD"] <- output$Solutions[i, "CrowD"]
-  }
-  return(OUTPUT)
-}
-
-#' Title
-#' CONVERT OUTPUT TO DATA.FRAME
-#' @param output
-#'
-#' @return
-#' @export
-#'
-#' @examples
-toDataFrame <- function(output) {
-  if (!is(output, "galgo.Obj")) {
-    stop("object must be of class 'galgo.Obj'")
-  }
-  Genes <- colnames(output$Solutions)[1:(ncol(output$Solutions) - 5)]
-  ListGenes <- list()
-  for (i in 1:nrow(output$Solutions)) {
-    ListGenes[[i]] <- list()
-    ListGenes[[i]] <- Genes[as.logical(output$Solutions[i, 1:length(Genes)])]
-  }
-
-  OUTPUT <- data.frame(Genes = I(ListGenes), k = output$Solutions[, "k"], SC.Fit = output$Solutions[, nrow(prob_matrix) + 2], Surv.Fit = output$Solutions[, nrow(prob_matrix) + 3], Rank = output$Solutions[, "rnkIndex"], CrowD = output$Solutions[, "CrowD"])
-  return(OUTPUT)
-}
-
 
